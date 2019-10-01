@@ -134,6 +134,9 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 % Only 1 location for each object on init. 
 :- {data(object(OB,ID),value(at,pair(X,Y)),0)} > 1, object(OB,ID).
 
+% Only 1 pickingstation per order on init
+:- {data(object(order,ID),value(pickingStation,S),0)} > 1, object(order,ID).
+
 
 %%%%%%%%%%%%%%%%% uniqueness and existence of fluent values %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -143,6 +146,7 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 
 % There must be one picking station, and only one, for every order. 
 %:- not 1{data(object(order,O), value(pickingStation,P), T)}1, data(object(order, O), V, T), T=1..n. Could not get to work..abandoned. 
+:- {data(object(order,ID),value(pickingStation,S),T)} > 1, object(order,ID), T = 1..n.
 
 
 %%%%%%%%%%%%%%%%% actions are exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,7 +158,7 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 {data(O, V, T+1)} :- data(O, V, T), T = 0..n-1.
 
 % Robot contiues to carry object. 
-{carries(object(robot,R),O,T+1)} :- carries(object(robot,R),O,T), T = 0..n-1.
+%{carries(object(robot,R),O,T+1)} :- carries(object(robot,R),O,T), T = 0..n-1. %% Got rid of carries object. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

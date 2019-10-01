@@ -24,7 +24,7 @@ init(object(highway,13),value(at,pair(1,4))).
 init(object(highway,14),value(at,pair(2,4))).
 init(object(highway,15),value(at,pair(3,4))).
 init(object(highway,16),value(at,pair(4,4))).
-init(object(highway,16),value(at,pair(3,4))).
+
 
 init(object(pickingStation,1),value(at,pair(1,3))).
 init(object(pickingStation,2),value(at,pair(3,1))).
@@ -45,7 +45,7 @@ init(object(product,1),value(on,pair(3,1))).
 init(object(product,2),value(on,pair(4,1))).
 init(object(product,3),value(on,pair(6,4))).
 init(object(product,4),value(on,pair(5,1))).
-init(object(product,4),value(on,pair(6,1))).
+
 
 
 init(object(order,1),value(pickingStation,1)).
