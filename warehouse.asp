@@ -20,7 +20,7 @@ node(X,Y) :- data(object(node,ID),value(at,pair(X,Y)), 0). %%May be used later f
 
 
 % Plan Length/ Time (Needed?)
-time(1..n). 
+%time(1..n). 
 
 
 
@@ -36,11 +36,11 @@ time(1..n).
 
 
 % Order Fullfillment when orders at 0. 
-
+%:- not data(object(order,_),value(line,(_,0)),T), T=n.
 
 
 % A robot cannot place a shelf on a highway node. 
-:- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,(X,Y)),T), occurs(object(robot,R),action(putdown,O),T), time(T).
+:- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,(X,Y)),T), occurs(object(robot,R),action(putdown,O),T), T=0..n.
 
 
 
@@ -50,11 +50,9 @@ time(1..n).
 % effect and preconditions of action													%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Overall definition of action
-%occurs(O,A,T) :-  T=1-n.
 
 % An object can only do a single action per given time slot.
-:- {occurs(object(OB,ID),A,T)} > 1, object(OB,ID), time(T).
+:- {occurs(object(OB,ID),A,T)} > 1, object(OB,ID), T=0..n.
 
 
 %%%%%%%%%%%%%%%%% Move %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -72,7 +70,7 @@ action(move(0,1;1,0;0,-1;-1,0)).
 % Condition for swithcing places covered under State Description for all objects. 
 
 % Define Movement for robot. New Location :- Movement, Initial Location
-data(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1).
+data(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),action(move(DX,DY)),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1).
 
 % Define Shelf being carried is moved as well : Shelf is at location X,Y if :- robot is at location X,Y and robot carries shelf at T-1.  
 data(object(shelf,S),value(at,(X,Y)),T) :- data(object(robot,R),value(at,(X,Y)),T), data(object(robot,R),value(carries,S),T-1). 
@@ -109,16 +107,39 @@ action(putdown).
 not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(putdown),T), data(object(robot,R),value(carries,O),T-1).
 
 %%%%%%%%%%%%%%%%% Deliver %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%occurs(object(robot,'r'),deliver('o','i','u'),'t').
-	% Robot needs to be carrying a shelf
-	% Robot needs to be at station
-	% Correct product needs to be at the correct picking station. 
-	% Robot can only deliver the amount of product availible on shelf. 
-	% Robot cannot deliver more then requested for order. 
-	% At least one product must be delivered. 
+% Denoted as occurs(object(robot,'r'),deliver('o','i','u'),'t').
 
-	% Order lines need to be updated. 
-	% Product quantity on shelf must be updated. 
+% Action can be: deliver(order 'o', product 'i', units 'u'). U2 and U1 are used for max value that can be delivered due to size of order. 
+action(deliver(O,I,U2)) :- data(object(order,O),value(line,(I,U1)),0),U2=1..U1.
+%occurs(object(robot,R),action(deliver(O,I,U2)),T) :- data(object(order,O),value(line,(I,U1)),0),U2=1..U1.
+
+% Robot needs to be carrying a shelf
+:- not data(object(robot,R),value(carries,_),T-1), occurs(object(robot,R),action(deliver,(_,_,_)),T).
+
+% Robot needs to be at station
+:- occurs(object(robot,R),action(deliver,(_,_,_)),T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(pickingStation,_),value(at,(X,Y)),T-1).
+
+% Correct product needs to be at the correct picking station. 
+:- occurs(object(robot,R),action(deliver(O,I,_)),T), data(object(robot,R),value(at,(X,Y)),T-1), data(object(pickingStation,P),value(at,(X,Y)),T-1), not {data(object(order,O),value(line,(I,_)),T-1); data(object(order,O),value(pickingStation,P),T-1)} = 2.
+
+% Robot can only deliver the amount of product availible on shelf. 
+:- occurs(object(robot,R),action(deliver(O,I,U2)),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1),U2>U1.
+
+% Robot cannot deliver more then requested for order. 
+:- occurs(object(robot,R),action(deliver(O,I,U2)),T), data(object(order,O),value(line,(I,U1)),T-1), U1<U2.
+
+% At least one product must be delivered. 
+:- occurs(object(robot,R),action(deliver(_,_,0)),T).
+
+%% Effects of action
+% Order lines need to be updated. 
+data(object(order,O),value(line,(I,U1-U2)),T) :- occurs(object(robot,R),action(deliver(O,I,U2)),T), data(object(order,O),value(line,(I,U1)),T-1), U2 < U1.
+
+% Product quantity on shelf must be updated. 
+data(object(product,I),value(on,(S,U1-U2)),T) :- occurs(object(robot,R),action(deliver(_,I,U2)),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1), U1>U2.
+
+% Ensure old data is removed (Units cannot remain the same.)
+:- occurs(object(robot,R),action(deliver(_,I,_)),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1), data(object(product,I),value(on,(S,U1)),T).
 
 
 
@@ -127,10 +148,6 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%% fluents are initially exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%1{data(object(OB,ID),value(at,pair(X,Y)),0):value(at,pair(X,Y))}1 :- object(OB,ID).
-%:- {data(object(OB,_),value(at, (X, Y)),0)} > 1, object(OB,ID), data(object(node,_),value(at, (X, Y)),0).
-%1{at(object(OB,ID),loc(X,Y),0):loc(X,Y)}1 :- object(OB,ID).
-
 % Only 1 location for each object on init. 
 :- {data(object(OB,ID),value(at,pair(X,Y)),0)} > 1, object(OB,ID).
 
@@ -141,11 +158,9 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 %%%%%%%%%%%%%%%%% uniqueness and existence of fluent values %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % An object can only be in one place at any given time. 
-%:- {data(object(OB,_),value(at,pair(X,Y)),0)} > 1, data(object(node,_), value(at,(X, Y)),0), init( object(OB,_), _). Could not get to work..abandoned. 
 :- {data(object(OB,ID),value(at,pair(X,Y)),T)} > 1, object(OB,ID), T = 1..n.
 
 % There must be one picking station, and only one, for every order. 
-%:- not 1{data(object(order,O), value(pickingStation,P), T)}1, data(object(order, O), V, T), T=1..n. Could not get to work..abandoned. 
 :- {data(object(order,ID),value(pickingStation,S),T)} > 1, object(order,ID), T = 1..n.
 
 
@@ -158,7 +173,7 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 {data(O, V, T+1)} :- data(O, V, T), T = 0..n-1.
 
 % Robot contiues to carry object. 
-%{carries(object(robot,R),O,T+1)} :- carries(object(robot,R),O,T), T = 0..n-1. %% Got rid of carries object. 
+{data(object(robot,R),value(carries,O),T+1)} :- data(object(robot,R),value(carries,O),T), T=0..n-1.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -172,5 +187,6 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(pu
 %#show err/3.
 %#show highway/2.
 %#show node/2.
+%#show ab/1.
 
 
