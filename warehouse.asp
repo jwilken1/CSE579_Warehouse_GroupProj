@@ -6,13 +6,21 @@
 % sort and object declaration														%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% For every init statement there is a location(Object, Value, Time) with time set to 0
-location(O, V, 0) :- init(O, V).
+% For every init statement there is a data(Object, Value, Time) with time set to 0
+data(O, V, 0) :- init(O, V).
+object(OB,ID) :- data(object(OB,ID),V,0).
+value(V1,V2) :- data(O,value(V1,V2),0).
+				
+%at(object(OB,ID),loc(X,Y),0) :- data(object(OB,ID),value(at,pair(X,Y)),0). Shouldnt need...for now
+
+% Product: i= product label, s= shelf located on, u = amount availible --> on(PID, Shelf, Units, Time)  Shouldnt need...for now
+%on(ID, S, U, 0) :- data(object(product,ID),value(on,pair(S,U)),0). Shouldnt need...for now
+
 
 % Plan Length/ Time (Needed?)
 time(1..n). 
 
-%#show location/3.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -20,11 +28,8 @@ time(1..n).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-% Only one of each type of object can be on a single node at any given time. 
-
-
 % Objects that are adjacent cannot switch places. Fail if :- (Obj1 at Loc1, T) and (Obj2 at Loc2, T) and  (Obj1 at Loc2, T-1) and (Obj2 at Loc1, T-1), Adjacency Math, Obj1 != Obj2	
-:- location(object(OB,OJ1),value(at(X1,Y1)),T), location(object(OB,OJ2),value(at(X2,Y2)),T), location(object(OB,OJ2),value(at(X1,Y1)),T-1), location(object(OB,OJ1),value(at(X2,Y2)),T-1), OJ1!=OJ2, |X1-X2|+|Y1-Y2|==1. 
+:- data(object(OB,OJ1),value(at(X1,Y1)),T), data(object(OB,OJ2),value(at(X2,Y2)),T), data(object(OB,OJ2),value(at(X1,Y1)),T-1), data(object(OB,OJ1),value(at(X2,Y2)),T-1), OJ1!=OJ2, |X1-X2|+|Y1-Y2|==1. 
 
 
 
@@ -55,15 +60,16 @@ time(1..n).
 
 % Movements can be: deltaX, deltaY: (0,1), (1,0), (0,-1), or (-1,0). This ensures that movement is to an adjacent Node. 
 %occurs(object(robot,R),move(0,1;1,0;0,-1;-1,0),T).  Think this is not needed and below will work.
-action(move(0,1;1,0;0,-1;-1,0)).
+%action(move(0,1;1,0;0,-1;-1,0)).
+move(0,1;1,0;0,-1;-1,0).
 
 % Target movement must be to a node in the warehouse. Fail if :- Movement, Initial Location, Not a node. 
-:- occurs(object(robot,R),move(DX,DY),T), location(object(robot,R),value(at,pair(X1,Y1)), T-1), not location(object(node,_),value(at(X1+DX,Y1+DY)),T).
+:- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1), not data(object(node,_),value(at(X1+DX,Y1+DY)),T).
 
 % Condition for swithcing places covered under State Description for all objects. 
 
 % Define Movement for robot. New Location :- Movement, Initial Location
-location(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),move(DX,DY),T), location(object(robot,R),value(at,pair(X1,Y1)), T-1).
+data(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1).
 
 	% Define Shelf being carried is moved as well. 
 
@@ -75,10 +81,10 @@ location(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),mov
 %Denoted as occurs(object(robot,'r'),pickup,'t').
 
 %Pickup can be: (pickup, time)
-action(pickup).
+%action(pickup).
 
 % Robot cannot be carrying a shelf already.
-:- occurs(object(robot,R),action(pickup,O),T), location(object(R,N),value(carries,O),T-1).
+:- occurs(object(robot,R),action(pickup,O),T), data(object(R,N),value(carries,O),T-1).
 
 % Shelf must be at pickup location.
 
@@ -93,13 +99,13 @@ action(pickup).
 % Denoted as occurs(object(robot,'r'),putdown,'t').
 
 % Action can be: (putdown, time)
-action(putdown).
+%action(putdown).
 	
 % Robot Needs to be carrying a shelf at previous timeslot.
-:- occurs(object(robot,R),putdown,T), not location(object(robot,R),value(carries,_),T-1).
+:- occurs(object(robot,R),putdown,T), not data(object(robot,R),value(carries,_),T-1).
 
 % Result of putdown: Not Carrying at T if :- putdown at T and carries at T-1
-not location(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T), location(object(robot,R),value(carries,O),T-1).
+not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T), data(object(robot,R),value(carries,O),T-1).
 
 %%%%%%%%%%%%%%%%% Deliver %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %occurs(object(robot,'r'),deliver('o','i','u'),'t').
@@ -120,25 +126,40 @@ not location(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdo
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%% fluents are initially exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+1{data(object(OB,ID),value(at,pair(X,Y)),0):value(at,pair(X,Y))}1 :- object(OB,ID).
+
 
 
 %%%%%%%%%%%%%%%%% uniqueness and existence of fluent values %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % An object can only be in one place at any given time. 
-
+%:- {data(object(OB,_),value(at,pair(X,Y)),0)} > 1, data(object(node,_), value(at,(X, Y)),0), init( object(OB,_), _). Could not get to work..abandoned. 
+:- {data(object(OB,ID),value(at,pair(X,Y)),0)} > 1, object(OB,ID), T = 1..n.
 
 % There must be one picking station, and only one, for every order. 
+%:- not 1{data(object(order,O), value(pickingStation,P), T)}1, data(object(order, O), V, T), T=1..n. Could not get to work..abandoned. 
 
 
 %%%%%%%%%%%%%%%%% actions are exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{occurs(O,A,T)} :- occurs(O,A,T), T = 0..n-1.
 
 
 %%%%%%%%%%%%%%%%% commonsense law of inertia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-{location(O, V, T+1)} :- location(O, V, T), T = 0..n-1.
+% Object stays at location unless moved.
+{data(O, V, T+1)} :- data(O, V, T), T = 0..n-1.
+
+% Robot contiues to carry object. 
+{carries(object(robot,R),O,T+1)} :- carries(object(robot,R),O,T), T = 0..n-1.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
-#show occurs/3.
-
+%#show occurs/3.
+%#show location/3.
+%#show object/2.
+%#show at/3.
+%#show value/2.
+%#show on/4.
+%#show err/3.
 
 
