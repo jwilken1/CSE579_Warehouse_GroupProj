@@ -9,9 +9,11 @@
 % For every init statement there is a data(Object, Value, Time) with time set to 0
 data(O, V, 0) :- init(O, V).
 object(OB,ID) :- data(object(OB,ID),V,0).
-value(V1,V2) :- data(O,value(V1,V2),0).
+
+highway(X,Y) :- init(object(highway,ID),value(at,pair(X,Y))). %%May be used later for expedience
+node(X,Y) :- data(object(node,ID),value(at,pair(X,Y)), 0). %%May be used later for expedience
 				
-%at(object(OB,ID),loc(X,Y),0) :- data(object(OB,ID),value(at,pair(X,Y)),0). Shouldnt need...for now
+%at(object(OB,ID),loc(X,Y),T) :- data(object(OB,ID),value(at,pair(X,Y)),T), time(T).
 
 % Product: i= product label, s= shelf located on, u = amount availible --> on(PID, Shelf, Units, Time)  Shouldnt need...for now
 %on(ID, S, U, 0) :- data(object(product,ID),value(on,pair(S,U)),0). Shouldnt need...for now
@@ -38,10 +40,9 @@ time(1..n).
 
 
 % A robot cannot place a shelf on a highway node. 
+:- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,(X,Y)),T), occurs(object(robot,R),action(putdown,O),T), time(T).
 
 
-
-% An object can only do a single action per given time slot.
 
 
 
@@ -52,7 +53,8 @@ time(1..n).
 % Overall definition of action
 %occurs(O,A,T) :-  T=1-n.
 
-%  An object can only do one action at a time.
+% An object can only do a single action per given time slot.
+:- {occurs(object(OB,ID),A,T)} > 1, object(OB,ID), time(T).
 
 
 %%%%%%%%%%%%%%%%% Move %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,34 +62,33 @@ time(1..n).
 
 % Movements can be: deltaX, deltaY: (0,1), (1,0), (0,-1), or (-1,0). This ensures that movement is to an adjacent Node. 
 %occurs(object(robot,R),move(0,1;1,0;0,-1;-1,0),T).  Think this is not needed and below will work.
-%action(move(0,1;1,0;0,-1;-1,0)).
-move(0,1;1,0;0,-1;-1,0).
+action(move(0,1;1,0;0,-1;-1,0)).
+%move(0,1;1,0;0,-1;-1,0).
 
-% Target movement must be to a node in the warehouse. Fail if :- Movement, Initial Location, Not a node. 
-:- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1), not data(object(node,_),value(at(X1+DX,Y1+DY)),T).
+%% Movement must be possible.
+% Target movement must be to a node in the warehouse. Fail if :- Movement, Initial Location, Not a node at new location. 
+:- occurs(object(robot,R),action(move(DX,DY)),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1), not data(object(node,_),value(at(X1+DX,Y1+DY)),T).
 
 % Condition for swithcing places covered under State Description for all objects. 
 
 % Define Movement for robot. New Location :- Movement, Initial Location
 data(object(robot,R),value(at(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1,Y1)), T-1).
 
-	% Define Shelf being carried is moved as well. 
-
-
-	% Movement must be possible. 
+% Define Shelf being carried is moved as well : Shelf is at location X,Y if :- robot is at location X,Y and robot carries shelf at T-1.  
+data(object(shelf,S),value(at,(X,Y)),T) :- data(object(robot,R),value(at,(X,Y)),T), data(object(robot,R),value(carries,S),T-1). 
 
 
 %%%%%%%%%%%%%%%%% Pickup %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Denoted as occurs(object(robot,'r'),pickup,'t').
 
 %Pickup can be: (pickup, time)
-%action(pickup).
+action(pickup).
 
 % Robot cannot be carrying a shelf already.
-:- occurs(object(robot,R),action(pickup,O),T), data(object(R,N),value(carries,O),T-1).
+:- occurs(object(robot,R),action(pickup),T), data(object(R,N),value(carries,O),T-1).
 
 % Shelf must be at pickup location.
-
+:- occurs(object(robot,R), action(pickup),  T), data( object(robot, R), value(at, (X, Y)), T-1), not data( object(shelf, _), value(at, (X, Y)), T-1).
 
 % If robot picks up a shelf, it should be at the same location as the shelf at the previous time slot. 
 
@@ -126,15 +127,19 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%% fluents are initially exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-1{data(object(OB,ID),value(at,pair(X,Y)),0):value(at,pair(X,Y))}1 :- object(OB,ID).
+%1{data(object(OB,ID),value(at,pair(X,Y)),0):value(at,pair(X,Y))}1 :- object(OB,ID).
+%:- {data(object(OB,_),value(at, (X, Y)),0)} > 1, object(OB,ID), data(object(node,_),value(at, (X, Y)),0).
+%1{at(object(OB,ID),loc(X,Y),0):loc(X,Y)}1 :- object(OB,ID).
 
+% Only 1 location for each object on init. 
+:- {data(object(OB,ID),value(at,pair(X,Y)),0)} > 1, object(OB,ID).
 
 
 %%%%%%%%%%%%%%%%% uniqueness and existence of fluent values %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % An object can only be in one place at any given time. 
 %:- {data(object(OB,_),value(at,pair(X,Y)),0)} > 1, data(object(node,_), value(at,(X, Y)),0), init( object(OB,_), _). Could not get to work..abandoned. 
-:- {data(object(OB,ID),value(at,pair(X,Y)),0)} > 1, object(OB,ID), T = 1..n.
+:- {data(object(OB,ID),value(at,pair(X,Y)),T)} > 1, object(OB,ID), T = 1..n.
 
 % There must be one picking station, and only one, for every order. 
 %:- not 1{data(object(order,O), value(pickingStation,P), T)}1, data(object(order, O), V, T), T=1..n. Could not get to work..abandoned. 
@@ -154,12 +159,14 @@ not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
-%#show occurs/3.
-%#show location/3.
+#show occurs/3.
+%#show data/3.
 %#show object/2.
 %#show at/3.
 %#show value/2.
 %#show on/4.
 %#show err/3.
+%#show highway/2.
+%#show node/2.
 
 
