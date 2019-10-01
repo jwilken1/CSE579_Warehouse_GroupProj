@@ -81,32 +81,32 @@ data(object(shelf,S),value(at,(X,Y)),T) :- data(object(robot,R),value(at,(X,Y)),
 %%%%%%%%%%%%%%%%% Pickup %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Denoted as occurs(object(robot,'r'),pickup,'t').
 
-%Pickup can be: (pickup, time)
+%Pickup can be: (pickup)
 action(pickup).
 
 % Robot cannot be carrying a shelf already.
 :- occurs(object(robot,R),action(pickup),T), data(object(R,N),value(carries,O),T-1).
 
 % Shelf must be at pickup location.
-:- occurs(object(robot,R), action(pickup),  T), data( object(robot, R), value(at, (X, Y)), T-1), not data( object(shelf, _), value(at, (X, Y)), T-1).
+:- occurs(object(robot,R),action(pickup),T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(shelf, _),value(at,(X,Y)),T-1).
 
 % If robot picks up a shelf, it should be at the same location as the shelf at the previous time slot. 
-
+:- occurs(object(robot,R),action(pickup),T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(shelf,_),value(at,(X,Y)),T-1).
 
 %%** Need to make a carries type effect for this. 
-	 
+data(object(robot,R),value(carries,S),T) :- occurs(object(robot,R),action(pickup),T), data(object(shelf,S),value(at,(X, Y)),T-1), data(object(robot,R),value(at,(X, Y)),T-1).	 
 
 %%%%%%%%%%%%%%%%% Putdown %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Denoted as occurs(object(robot,'r'),putdown,'t').
 
-% Action can be: (putdown, time)
-%action(putdown).
+% Action can be: (putdown)
+action(putdown).
 	
 % Robot Needs to be carrying a shelf at previous timeslot.
-:- occurs(object(robot,R),putdown,T), not data(object(robot,R),value(carries,_),T-1).
+:- occurs(object(robot,R),action(putdown),T), not data(object(robot,R),value(carries,_),T-1).
 
 % Result of putdown: Not Carrying at T if :- putdown at T and carries at T-1
-not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T), data(object(robot,R),value(carries,O),T-1).
+not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),action(putdown),T), data(object(robot,R),value(carries,O),T-1).
 
 %%%%%%%%%%%%%%%%% Deliver %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %occurs(object(robot,'r'),deliver('o','i','u'),'t').
