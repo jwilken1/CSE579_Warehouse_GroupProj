@@ -33,20 +33,11 @@ time(1..H) :-  horizon(H).
 
 
 % Order Fullfillment when orders at 0. 
-%:- not data(object(order,_),value(line,(_,0)),H), horizon(H).
-
-%% Testing Movement first %% Works
-:- not data(object(robot,1),value(at,pair(1,1)),H), horizon(H).
-%:- not data(object(robot,2),value(at,pair(1,1)),H), horizon(H). % Doesn't work as expected. Coll node 1.
-:- not data(object(robot,2),value(at,pair(1,2)),H), horizon(H).
-%:- not data(object(robot,2),value(at,pair(2,2)),H), horizon(H). % Doesn't work as expected. Dup node 2.
+:- not data(object(order,_),value(line,pair(_,0)),H), horizon(H).
 
 
 % A robot cannot place a shelf on a highway node. 
-:- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,(X,Y)),T), occurs(object(robot,R),putdown,T), time(T).
-
-
-
+:- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,pair(X,Y)),T), occurs(object(robot,R),putdown,T), time(T).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -78,7 +69,13 @@ data(object(robot,R),value(at,pair(X1+DX,Y1+DY)),T) :- occurs(object(robot,R),mo
 :- data(object(robot,R),value(at,pair(X1,Y1)),T-1), occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X2,Y2)),T), (X1,Y1)=(X2,Y2).
 
 % Define Shelf being carried is moved as well : Shelf is at location X,Y if :- robot is at location X,Y and robot carries shelf at T-1.  
-data(object(shelf,S),value(at,(X,Y)),T) :- data(object(robot,R),value(at,(X,Y)),T), data(object(robot,R),value(carries,S),T-1). 
+data(object(shelf,S),value(at,pair(X,Y)),T) :- data(object(robot,R),value(at,pair(X,Y)),T), data(object(robot,R),value(carries,S),T-1). 
+
+%% Testing robot Movement first %% Works
+%:- not data(object(robot,1),value(at,pair(1,1)),H), horizon(H).
+%:- not data(object(robot,2),value(at,pair(1,1)),H), horizon(H). % Doesn't work as expected. Coll node 1.
+%:- not data(object(robot,2),value(at,pair(1,2)),H), horizon(H).
+%:- not data(object(robot,2),value(at,pair(2,2)),H), horizon(H). % Doesn't work as expected. Dup node 2.
 
 
 %%%%%%%%%%%%%%%%% Pickup %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,16 +85,20 @@ data(object(shelf,S),value(at,(X,Y)),T) :- data(object(robot,R),value(at,(X,Y)),
 action(pickup).
 
 % Robot cannot be carrying a shelf already.
-:- occurs(object(robot,R),pickup,T), data(object(R,N),value(carries,O),T-1).
+:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(carries,O),T-1).
 
 % Shelf must be at pickup location.
-:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(shelf, _),value(at,(X,Y)),T-1).
+:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(shelf, _),value(at,pair(X,Y)),T-1).
 
 % If robot picks up a shelf, it should be at the same location as the shelf at the previous time slot. 
-:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(shelf,_),value(at,(X,Y)),T-1).
+%:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(shelf,_),value(at,pair(X,Y)),T-1).
 
 %%** Need to make a carries type effect for this. 
-data(object(robot,R),value(carries,S),T) :- occurs(object(robot,R),pickup,T), data(object(shelf,S),value(at,(X, Y)),T-1), data(object(robot,R),value(at,(X, Y)),T-1).	 
+data(object(robot,R),value(carries,object(shelf,S)),T) :- occurs(object(robot,R),pickup,T), data(object(shelf,S),value(at,pair(X,Y)),T-1), data(object(robot,R),value(at,pair(X,Y)),T-1).
+
+%% Testing pickup
+%:- not data(object(robot,2),value(carries,object(shelf,3)),H), horizon(H).
+%:- not data(object(robot,1),value(carries,object(shelf,2)),H), horizon(H).	 
 
 %%%%%%%%%%%%%%%%% Putdown %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Denoted as occurs(object(robot,'r'),putdown,'t').
@@ -111,40 +112,50 @@ action(putdown).
 % Result of putdown: Not Carrying at T if :- putdown at T and carries at T-1
 not data(object(robot,R),value(carries,O),T) :- occurs(object(robot,R),putdown,T), data(object(robot,R),value(carries,O),T-1).
 
+%% Testing putdown
+%:- not data(object(robot,2),value(carries,object(shelf,3)),T), T=2. %% Pickup and get ready to put down
+%:- not data(object(robot,1),value(carries,object(shelf,2)),T), T=5. %% Pickup and get ready to put down
+%:- not occurs(object(robot,1),putdown,7).
+%:- not occurs(object(robot,2),putdown,4).
+
 %%%%%%%%%%%%%%%%% Deliver %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Denoted as occurs(object(robot,'r'),deliver('o','i','u'),'t').
+% data(object(order,1),value(line,pair(3,4)),0) 
 
 % Action can be: deliver(order 'o', product 'i', units 'u'). U2 and U1 are used for max value that can be delivered due to size of order. 
-action(deliver(O,I,U2)) :- data(object(order,O),value(line,(I,U1)),0),U2=1..U1.
+action(deliver(O,I,U2)) :- data(object(order,O),value(line,pair(I,U1)),0),U2=1..U1.
 
 % Robot needs to be carrying a shelf
 :- not data(object(robot,R),value(carries,_),T-1), occurs(object(robot,R),deliver(_,_,_),T).
 
 % Robot needs to be at station
-:- occurs(object(robot,R),deliver(_,_,_),T), data(object(robot,R),value(at,(X,Y)),T-1), not data(object(pickingStation,_),value(at,(X,Y)),T-1).
+:- occurs(object(robot,R),deliver(_,_,_),T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(pickingStation,_),value(at,pair(X,Y)),T-1).
 
 % Correct product needs to be at the correct picking station. 
-:- occurs(object(robot,R),deliver(O,I,_),T), data(object(robot,R),value(at,(X,Y)),T-1), data(object(pickingStation,P),value(at,(X,Y)),T-1), not {data(object(order,O),value(line,(I,_)),T-1); data(object(order,O),value(pickingStation,P),T-1)} = 2.
+:- occurs(object(robot,R),deliver(O,I,_),T), data(object(robot,R),value(at,pair(X,Y)),T-1), data(object(pickingStation,P),value(at,pair(X,Y)),T-1), not {data(object(order,O),value(line,pair(I,_)),T-1); data(object(order,O),value(pickingStation,P),T-1)} = 2.
 
 % Robot can only deliver the amount of product availible on shelf. 
-:- occurs(object(robot,R),deliver(O,I,U2),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1),U2>U1.
+:- occurs(object(robot,R),deliver(O,I,U2),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,pair(S,U1)),T-1), U2>U1.
 
 % Robot cannot deliver more then requested for order. 
-:- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,(I,U1)),T-1), U1<U2.
+:- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,pair(I,U1)),T-1), U1<U2.
 
 % At least one product must be delivered. 
 :- occurs(object(robot,R),deliver(_,_,0),T).
 
 %% Effects of action
 % Order lines need to be updated. 
-data(object(order,O),value(line,(I,U1-U2)),T) :- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,(I,U1)),T-1), U2 < U1.
+%data(object(order,1),value(line,pair(1,1)),0) 
+data(object(order,O),value(line,pair(I,U1-U2)),T) :- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,pair(I,U1)),T-1).
 
 % Product quantity on shelf must be updated. 
-data(object(product,I),value(on,(S,U1-U2)),T) :- occurs(object(robot,R),deliver(_,I,U2),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1), U1>U2.
+data(object(product,I),value(on,pair(S,U1-U2)),T) :- occurs(object(robot,R),deliver(_,I,U2),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,pair(S,U1)),T-1), not U1<U2.
 
 % Ensure old data is removed (Units cannot remain the same.)
-:- occurs(object(robot,R),deliver(_,I,_),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,(S,U1)),T-1), data(object(product,I),value(on,(S,U1)),T).
+:- occurs(object(robot,R),deliver(_,I,_),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,pair(S,U1)),T-1), data(object(product,I),value(on,pair(S,U2)),T), U1=U2.
 
+%% Test Deliver
+%:- not occurs(object(robot,1),deliver(1,3,1),10).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -176,8 +187,9 @@ data(object(product,I),value(on,(S,U1-U2)),T) :- occurs(object(robot,R),deliver(
 % Object stays at location unless moved.
 {data(O, V, T+1)} :- data(O, V, T), T = 0..n.
 
-% Robot contiues to carry object. 
-{data(object(robot,R),value(carries,O),T+1)} :- data(object(robot,R),value(carries,O),T), T = 0..n.
+% Robot contiues to carry object.
+data(object(robot,2),value(carries,object(shelf,3)),2) 
+{data(object(robot,R),value(carries,object(shelf,S)),T+1)} :- data(object(robot,R),value(object(shelf,S)),T), T = 0..n.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
