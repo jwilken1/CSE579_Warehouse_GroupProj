@@ -33,7 +33,7 @@ time(1..H) :-  horizon(H).
 
 
 % Order Fullfillment when orders at 0. 
-:- not data(object(order,_),value(line,pair(_,0)),H), horizon(H).
+:- not data(object(order,O),value(line,pair(_,0)),H), object(order,O), horizon(H).
 
 
 % A robot cannot place a shelf on a highway node. 
@@ -195,7 +195,7 @@ data(object(robot,2),value(carries,object(shelf,3)),2)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
 #show occurs/3.
-#show data/3.
+%#show data/3.
 %#show object/2.
 %#show at/3.
 %#show value/2.
