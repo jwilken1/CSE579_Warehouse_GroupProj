@@ -4,11 +4,11 @@ object(OJ,ID) :- data(object(OJ,ID),V,0).
 
 %horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
 horizon(H) :- H = n.
-time(1..H) :-  horizon(H).
+time(0..H) :-  horizon(H).
 
 % Order Fullfillment when orders at 0. 
 %:- not data(object(order,_),value(line,(_,0)),T), T=n.
-:- not data(object(robot,1),value(at,pair(4,4)),H), horizon(H).
+:- not data(object(robot,1),value(at,pair(1,1)),H), horizon(H).
 
 
 % An object can only do a single action per given time slot.
