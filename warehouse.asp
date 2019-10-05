@@ -169,7 +169,7 @@ data(object(product,I),value(on,pair(S,U1-U2)),T) :- occurs(object(robot,R),deli
 :- occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,R),value(carries,S),T-1), data(object(product,I),value(on,pair(S,U1)),T-1), data(object(product,I),value(on,pair(S,U2)),T), U1=U2.
 
 %% Test Deliver
-:- not occurs(object(robot,1),deliver(1,3,1),10).
+%:- not occurs(object(robot,1),deliver(1,3,1),10).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
