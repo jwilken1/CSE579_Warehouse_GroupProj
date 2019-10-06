@@ -11,11 +11,9 @@ data(O, V, 0) :- init(O, V).
 object(OB,ID) :- data(object(OB,ID),V,0).
 
 % Plan Length/ Time (Needed?)
-horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
-%horizon(H) :- H = n.
 time(1..n).
+horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
 
-#minimize {H : horizon(H)}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % state description															%
@@ -229,6 +227,9 @@ data(object(order,O),value(line,pair(I,U)),T+1) :- data(object(order,O),value(li
 
 % Order Fullfillment when order lines are at 0. 
 :- not data(object(order,O),value(line,pair(I,0)),H), init(object(order,O),value(line,pair(I,U))), horizon(H).
+
+% Minimize time for max H
+#minimize {H : horizon(H)}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
