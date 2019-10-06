@@ -10,31 +10,20 @@
 data(O, V, 0) :- init(O, V).
 object(OB,ID) :- data(object(OB,ID),V,0).
 
-%highway(X,Y) :- init(object(highway,ID),value(at,pair(X,Y))). %%May be used later for expedience
-%node(X,Y) :- data(object(node,ID),value(at,pair(X,Y)), 0). %%May be used later for expedience				
-
-
 % Plan Length/ Time (Needed?)
-%horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
-horizon(H) :- H = n.
-time(1..H) :-  horizon(H).
+time(1..n).
+horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % state description															%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 % Objects that are adjacent cannot switch places. Fail if :- (Obj1 at Loc1, T) and (Obj2 at Loc2, T) and  (Obj1 at Loc2, T-1) and (Obj2 at Loc1, T-1), Adjacency Math, Obj1 != Obj2	
 :- data(object(OB,OJ1),value(at,pair(X1,Y1)),T), data(object(OB,OJ2),value(at,pair(X2,Y2)),T), data(object(OB,OJ2),value(at,pair(X1,Y1)),T-1), data(object(OB,OJ1),value(at,pair(X2,Y2)),T-1), OJ1!=OJ2, |X1-X2|+|Y1-Y2|==1. 
 
 % No two objects of the same type can be on the same place (Collision)
 :- data(object(OB,OJ1),value(at,pair(X,Y)),T), data(object(OB,OJ2),value(at,pair(X,Y)),T), OJ2!=OJ1.
-
-
-% Order Fullfillment when orders at 0. 
-:- not data(object(order,O),value(line,pair(I,0)),H), init(object(order,O),value(line,pair(I,U))), horizon(H).
-
 
 % A robot cannot place a shelf on a highway node. 
 :- data(object(highway,ID),value(at,pair(X,Y)),T), data(object(robot,R),value(at,pair(X,Y)),T), occurs(object(robot,R),putdown,T), time(T).
@@ -63,7 +52,6 @@ action(move(0,1;1,0;0,-1;-1,0)).
 
 %% Movement must be possible.
 % Target movement must be to a node in the warehouse. Fail if :- Movement, Initial Location, Not a node at new location.
-%  occurs(object(robot,R),move(DX,DY),T)  data(object(robot,R),value(at,pair(X1+DX,Y1+DY)), T  )      data(object(node,11),value(at,pair(3,3)),0) 
 :- occurs(object(robot,R),move(DX,DY),T), data(object(robot,R),value(at,pair(X1   ,Y1   )), T-1), not data(object(node,_),value(at,pair(X1+DX,Y1+DY)),T).
 
 % Condition for swithcing places covered under State Description for all objects. 
@@ -92,11 +80,8 @@ action(pickup).
 % Robot cannot be carrying a shelf already.
 :- occurs(object(robot,R),pickup,T), data(object(robot,R),value(carries,O),T-1).
 
-% Shelf must be at pickup location.
+% Shelf must be at pickup location of robot.
 :- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(shelf, _),value(at,pair(X,Y)),T-1).
-
-% If robot picks up a shelf, it should be at the same location as the shelf at the previous time slot. 
-%:- occurs(object(robot,R),pickup,T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(shelf,_),value(at,pair(X,Y)),T-1).
 
 %%** Need to make a carries type effect for this. 
 data(object(robot,R),value(carries,object(shelf,S)),T) :- occurs(object(robot,R),pickup,T), data(object(shelf,S),value(at,pair(X,Y)),T-1), data(object(robot,R),value(at,pair(X,Y)),T-1).
@@ -133,13 +118,10 @@ action(deliver(O,I,U2)) :- data(object(order,O),value(line,pair(I,U1)),0),U2=1..
 % Robot needs to be carrying a shelf
 :- not data(object(robot,R),value(carries,_),T-1), occurs(object(robot,R),deliver(O,I,U),T).
 
-% Robot needs to be at station
-%  occurs(object(robot,R),deliver(O,I,U),T), data(object(pickingStation,3),value(at,pair(1,1)),0)    data(object(robot,1),value(at,pair(3,3)),1),    
+% Robot needs to be at station    
 :- occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(pickingStation,_),value(at,pair(X,Y)),T-1).
 
-% Correct product needs to be at the correct picking station / Item.-- Having issues with this so movign requirement to action effect for testing.
-%  occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,1),value(at,pair(3,3)),1  )  data(object(pickingStation,3),value(at,pair(1,1)),0)          object(order,1),value(line,pair(1,1)             object(order,2),value(pickingStation,2
-%:- occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,R),value(at,pair(X,Y)),T-1), not data(object(order,O),value(line,pair(I,_)),T-1).
+% Correct product needs to be at the correct picking station / Item.-- Having issues with this so addin more requirements to action effect for testing.
 :- occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,R),value(at,pair(X,Y)),T-1), data(object(pickingStation,P),value(at,pair(X,Y)),T-1), not data(object(order,O),value(pickingStation,P),T-1).
 :- occurs(object(robot,R),deliver(O,I,U),T), data(object(robot,R),value(carries,object(shelf,S)),T-1), not data(object(product,I),value(on,pair(S,_)),T-1). 
 
@@ -150,12 +132,10 @@ action(deliver(O,I,U2)) :- data(object(order,O),value(line,pair(I,U1)),0),U2=1..
 :- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,pair(I,U1)),T-1), U1<U2.
 
 % At least one product must be delivered. 
-%:- occurs(object(robot,R),deliver(O,I,0),T).
+:- occurs(object(robot,R),deliver(O,I,0),T).
 
 %% Effects of action
 % Order lines need to be updated. 
-%data(object(order,1),value(line,pair(1,1)),0) 
-%data(object(order,O),value(line,pair(I,U1-U2)),T) :- occurs(object(robot,R),deliver(O,I,U2),T), data(object(order,O),value(line,pair(I,U1)),T-1). %%Before adding more constraints
 data(object(order,O),value(line,pair(I,U1-U2)),T) :- occurs(object(robot,R),deliver(O,I,U2),T), 
 								data(object(order,O),value(line,pair(I,U1)),T-1), 
 								data(object(robot,R),value(at,pair(X,Y)),T-1), 
@@ -192,6 +172,9 @@ data(object(product,I),value(on,pair(S,U1-U2)),T) :- occurs(object(robot,R),deli
 % There must be one picking station, and only one, for every order. 
 :- {data(object(order,ID),value(pickingStation,S),T)} > 1, object(order,ID), time(T).
 
+% Definition of carries
+{data(object(robot,R),value(carries,object(shelf,S)),T+1)} :- data(object(robot,R),value(carries,object(shelf,S)),T), T = 0..n-1.
+
 
 %%%%%%%%%%%%%%%%% actions are exogenous %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {occurs(object(OJ,ID),A,T)} :- object(OJ,ID), action(A), T=0..n.
@@ -200,17 +183,23 @@ data(object(product,I),value(on,pair(S,U1-U2)),T) :- occurs(object(robot,R),deli
 %%%%%%%%%%%%%%%%% commonsense law of inertia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Object stays at location unless moved.
 {data(O, V, T+1)} :- data(O, V, T), T = 0..n-1.
+
+% Robot cannot move w/o action
 {data(object(robot,R),value(at,pair(X,Y)),T+1)} :- data(object(robot,R),value(at,pair(X,Y)),T), T = 0..n-1.
 data(object(robot,R),value(at,pair(X,Y)),T+1) :- data(object(robot,R),value(at,pair(X,Y)),T), not occurs(object(robot,R),move(_,_),T+1), T = 0..n-1.
 
+% Picking station cannot move w/o action
+data(object(order,O),value(pickingStation,P),T+1)  :- data(object(order,O),value(pickingStation,P),T), T=0..n-1.
+
+% Shelf cannot move w/o action
 {data(object(shelf,S),value(at,pair(X,Y)),T+1)} :- data(object(shelf,S),value(at,pair(X,Y)),T), T = 0..n-1.
 data(object(shelf,S),value(at,pair(X,Y)),T+1) :- data(object(shelf,S),value(at,pair(X,Y)),T), not data(object(robot,_),value(carries,object(shelf,S)),T+1), T = 0..n-1.
 
 
-% Robot contiues to carry object.
-%data(object(robot,2),value(carries,object(shelf,3)),2) 
-{data(object(robot,R),value(carries,object(shelf,S)),T+1)} :- data(object(robot,R),value(carries,object(shelf,S)),T), T = 0..n-1.
+% Robot contiues to carry object. 
 data(object(robot,R),value(carries,object(shelf,S)),T+1) :- data(object(robot,R),value(carries,object(shelf,S)),T), not occurs(object(robot,R),putdown,T+1), T = 0..n-1.
+
+% Robot cannot carry object if it wasnt at last timestamp and pickup didnt occur
 :- data(object(robot,R),value(carries,object(shelf,S)),T+1), not data(object(robot,R),value(carries,object(shelf,S)),T), not occurs(object(robot,R),pickup,T+1), T = 0..n-1.
 
 % Shelf product value stays consistent
@@ -218,9 +207,8 @@ data(object(robot,R),value(carries,object(shelf,S)),T+1) :- data(object(robot,R)
 data(object(product,I),value(on,pair(S,U)),T+1) :- data(object(product,I),value(on,pair(S,U)),T), not data(object(robot,_),value(carries,object(shelf,S)),T), T = 0..n-1.
 data(object(product,I),value(on,pair(S,U)),T+1) :- data(object(product,I),value(on,pair(S,U)),T), data(object(robot,R),value(carries,object(shelf,S)),T), not occurs(object(robot,R),deliver(_,I,_),T+1), T = 0..n-1.
 
-% Order remains consistent unless delivered
-data(object(order,O),value(pickingStation,P),T+1)  :- data(object(order,O),value(pickingStation,P),T), T=0..1.
-
+%% Order remains consistent unless delivered
+% Order Lines cannot move -- Had to do 3 checks in order to properly detect actions.
 {data(object(order,O),value(line,pair(I,U)),T+1)} :- data(object(order,O),value(line,pair(I,U)),T), T = 0..n-1.
 data(object(order,O),value(line,pair(I,U)),T+1) :- data(object(order,O),value(line,pair(I,U)),T), 
 							data(object(order,O),value(pickingStation,P),T), 
@@ -231,6 +219,17 @@ data(object(order,O),value(line,pair(I,U)),T+1) :- data(object(order,O),value(li
 							data(object(pickingStation,P),value(at,pair(X,Y)),T), 
 							data(object(robot,R),value(at,pair(X,Y)),T),
 							not occurs(object(robot,R),deliver(O,I,_),T+1), T = 0..n-1.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% goal															                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Order Fullfillment when order lines are at 0. 
+:- not data(object(order,O),value(line,pair(I,0)),H), init(object(order,O),value(line,pair(I,U))), horizon(H).
+
+% Minimize time for max H
+#minimize {H : horizon(H)}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
