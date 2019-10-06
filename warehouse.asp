@@ -10,7 +10,7 @@
 data(O, V, 0) :- init(O, V).
 object(OB,ID) :- data(object(OB,ID),V,0).
 
-% Plan Length/ Time (Needed?)
+% Plan Length/ Time
 time(1..n).
 horizon(H) :- H = #max{ 0; T : occurs( _, _, T) }.
 
