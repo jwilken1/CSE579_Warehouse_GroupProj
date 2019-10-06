@@ -235,7 +235,7 @@ data(object(order,O),value(line,pair(I,U)),T+1) :- data(object(order,O),value(li
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Show
 #show occurs/3.
-#show data/3.
+%#show data/3.
 %#show object/2.
 %#show at/3.
 %#show value/2.
